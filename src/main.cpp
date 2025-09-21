@@ -45,7 +45,7 @@ void setup()
   pinMode(CONFIG_BTN_PIN, INPUT_PULLUP);
 
   // Setup Thermistors
-  thermistor = new Thermistor(THERMISTOR_PIN, 3.3, 3.3, 1023, 10000, 10000, 25, 3380, 1, 0);
+  thermistor = new Thermistor(THERMISTOR_PIN, 3.3, 3.3, 1023, 10000, 10000, 27.8, 3380, 1, 0);
 
   // Set WiFi to station mode
   WiFi.mode(WIFI_STA);
@@ -84,7 +84,7 @@ void readThermistor()
 {
   if (millis() - thermistorStartTime > 2000)
   {
-    float temperature = thermistor->readTempC() + 2.3;
+    float temperature = thermistor->readTempC();
     Serial.print("Temperature: ");
     Serial.print(temperature);
     Serial.println(" °C");
