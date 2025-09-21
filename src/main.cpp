@@ -31,6 +31,9 @@ void setup()
   pinMode(HEATER_2_PIN, OUTPUT);
   digitalWrite(HEATER_2_PIN, LOW);
 
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, HIGH);
+
   pinMode(THERMISTOR_PIN, INPUT);
 
   pinMode(CONFIG_BTN_PIN, INPUT_PULLUP);
@@ -48,6 +51,14 @@ void setup()
   MDNS.begin("shedheater2000");
   wm.setConfigPortalTimeout(wifiPortalTimeout);
   wm.autoConnect("shedheater2000-Setup");
+
+  for (int i = 0; i < 3; i++)
+  {
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(200);
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(200);
+  }
 }
 
 void loop()
@@ -71,6 +82,7 @@ void doWiFiManager()
     {
       Serial.println("portal timed out");
       portalRunning = false;
+      digitalWrite(LED_BUILTIN, HIGH);
       if (startAP)
       {
         wm.stopConfigPortal();
@@ -97,6 +109,7 @@ void doWiFiManager()
       wm.startWebPortal();
     }
     portalRunning = true;
+    digitalWrite(LED_BUILTIN, LOW);
     startTime = millis();
   }
 }
