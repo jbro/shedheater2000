@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <WiFiManager.h>
 #include <ESP8266mDNS.h>
+#include <thermistor.h>
 
 #define FAN_PIN D2
 #define CONFIG_BTN_PIN D5
@@ -11,13 +12,18 @@
 WiFiManager wm;
 
 unsigned int wifiPortalTimeout = 180;
-unsigned long startTime = millis();
+unsigned long wifistartTime = millis();
 
 bool portalRunning = false;
 bool startAP = false;
 
 // Function prototype
 void doWiFiManager();
+
+Thermistor *thermistor;
+
+void readThermistor();
+unsigned long thermistorStartTime = millis();
 
 void setup()
 {
@@ -38,13 +44,15 @@ void setup()
 
   pinMode(CONFIG_BTN_PIN, INPUT_PULLUP);
 
+  // Setup Thermistors
+  thermistor = new Thermistor(THERMISTOR_PIN, 3.3, 3.3, 1023, 10000, 10000, 25, 3380, 1, 0);
+
   // Set WiFi to station mode
   WiFi.mode(WIFI_STA);
 
   // Start Serial for debug output
   Serial.begin(115200);
-  delay(1000);
-
+  delay(300);
   Serial.println("Ready");
 
   wm.setHostname("shedheater2000");
@@ -68,6 +76,20 @@ void loop()
 
   // Handle WiFi Manager
   doWiFiManager();
+
+  readThermistor();
+}
+
+void readThermistor()
+{
+  if (millis() - thermistorStartTime > 2000)
+  {
+    float temperature = thermistor->readTempC() + 2.3;
+    Serial.print("Temperature: ");
+    Serial.print(temperature);
+    Serial.println(" °C");
+    thermistorStartTime = millis();
+  }
 }
 
 void doWiFiManager()
@@ -78,7 +100,7 @@ void doWiFiManager()
     wm.process();
 
     // check for timeout
-    if ((millis() - startTime) > (wifiPortalTimeout * 1000))
+    if ((millis() - wifistartTime) > (wifiPortalTimeout * 1000))
     {
       Serial.println("portal timed out");
       portalRunning = false;
@@ -110,6 +132,6 @@ void doWiFiManager()
     }
     portalRunning = true;
     digitalWrite(LED_BUILTIN, LOW);
-    startTime = millis();
+    wifistartTime = millis();
   }
 }
