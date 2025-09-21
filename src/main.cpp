@@ -2,7 +2,7 @@
 #include <WiFiManager.h>
 #include <ESP8266mDNS.h>
 
-#define FAN_PIN D4
+#define FAN_PIN D2
 #define CONFIG_BTN_PIN D5
 #define HEATER_1_PIN D6
 #define HEATER_2_PIN D7
@@ -23,7 +23,7 @@ void setup()
 {
   // Setup PIN modes and states as early as possible
   pinMode(FAN_PIN, OUTPUT);
-  digitalWrite(FAN_PIN, HIGH);
+  digitalWrite(FAN_PIN, LOW);
 
   pinMode(HEATER_1_PIN, OUTPUT);
   digitalWrite(HEATER_1_PIN, LOW);
