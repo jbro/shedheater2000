@@ -11,7 +11,7 @@
 WiFiManager wm;
 
 unsigned int wifiPortalTimeout = 180;
-unsigned int startTime = millis();
+unsigned long startTime = millis();
 
 bool portalRunning = false;
 bool startAP = false;
