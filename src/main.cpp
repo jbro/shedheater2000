@@ -22,9 +22,6 @@ void doWiFiManager();
 
 Thermistor *thermistor;
 
-void readThermistor();
-unsigned long thermistorStartTime = millis();
-
 void setup()
 {
   // Setup PIN modes and states as early as possible
@@ -76,20 +73,6 @@ void loop()
 
   // Handle WiFi Manager
   doWiFiManager();
-
-  readThermistor();
-}
-
-void readThermistor()
-{
-  if (millis() - thermistorStartTime > 2000)
-  {
-    float temperature = thermistor->readTempC();
-    Serial.print("Temperature: ");
-    Serial.print(temperature);
-    Serial.println(" °C");
-    thermistorStartTime = millis();
-  }
 }
 
 void doWiFiManager()
