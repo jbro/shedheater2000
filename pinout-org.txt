@@ -1,6 +1,0 @@
-5: A1 : Thermistor
-4: D2 : Fan Active High
-3: D7 : Heater 2 Active High
-2: D6 : Heater 1 Active High
-1: GND
-0: +5
