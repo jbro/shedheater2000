@@ -39,9 +39,9 @@ public:
 };
 
 // Custom Parameters
-IntParameter setpointParam("setpointParam", "Temperature Setpoint (C)", 5);
-IntParameter hysteresisParam("hysteresisParam", "Hysteresis (C)", 1);
-IntParameter fanRunOnParam("fanRunOnParam", "Fan Run On Time (seconds)", 60);
+IntParameter setpointParam("setpointParam", "Temperature Setpoint (°C)", 5);
+IntParameter hysteresisParam("hysteresisParam", "Hysteresis (°C)", 1);
+IntParameter fanOverrunTimeParam("fanOverrunTimeParam", "Fan Overrun Time (seconds)", 60);
 WiFiManagerParameter ntpServerParam("ntpServerParam", "NTP Server", "pool.ntp.org", 32);
 
 Thermistor *thermistor;
@@ -110,7 +110,7 @@ void setup()
   // Add custom parameters
   wm.addParameter(&setpointParam);
   wm.addParameter(&hysteresisParam);
-  wm.addParameter(&fanRunOnParam);
+  wm.addParameter(&fanOverrunTimeParam);
   wm.addParameter(&ntpServerParam);
 
   // TODO Restore parameter values from EEPROM
@@ -125,7 +125,7 @@ void setup()
       float temp = thermistor->readTempC();
       String setPoint = setpointParam.getValueStr();
       String hysteresis = hysteresisParam.getValueStr();
-      String fanTimeout = fanRunOnParam.getValueStr();
+      String fanTimeout = fanOverrunTimeParam.getValueStr();
 
       // XXX Move time and temperature into their own pages and update with JS
       String page;
@@ -139,9 +139,10 @@ void setup()
       page.replace(FPSTR(T_v), "Status");
       page += "<p>Current Time: " + timeClient.getFormattedTime() + " UTC</p>";
       page += "<p>Temperature: " + String(temp, 1) + " &deg;C</p>";
+      page += "<h3>Parameters</h3>";
       page += "<p>Setpoint: " + setPoint + " &deg;C</p>";
       page += "<p>Hysteresis: " + hysteresis + " &deg;C</p>";
-      page += "<p>Fan Run On Time: " + fanTimeout + " seconds</p>";
+      page += "<p>Fan Overrun Time: " + fanTimeout + " seconds</p>";
       page += FPSTR(HTTP_BR);
       page += FPSTR(HTTP_BACKBTN);
       page += FPSTR(HTTP_END);
