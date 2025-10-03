@@ -204,24 +204,24 @@ void setup()
   // Add custom routes to WiFiManager's web server
   wm.setWebServerCallback([&]()
                           {
-      wm.server->on("/values", HTTP_GET, [=]()
+     wm.server->on("/values", HTTP_GET, [=]()
                                           {
-      float temp = thermistor->readTempC();
-      bool fanState = digitalRead(FAN_PIN) == HIGH;
-      bool heater1State = digitalRead(HEATER_1_PIN) == HIGH;
-      bool heater2State = digitalRead(HEATER_2_PIN) == HIGH;
-      String time = timeClient.getFormattedTime();
+       float temp = thermistor->readTempC();
+       bool fanState = digitalRead(FAN_PIN) == HIGH;
+       bool heater1State = digitalRead(HEATER_1_PIN) == HIGH;
+       bool heater2State = digitalRead(HEATER_2_PIN) == HIGH;
+       String time = timeClient.getFormattedTime();
 
-      String json;
-      json += "{";
-      json += "\"temperature\": " + String(temp) + ",";
-      json += "\"fan\": " + String(fanState) + ",";
-      json += "\"heater1\": " + String(heater1State) + ",";
-      json += "\"heater2\": " + String(heater2State) + ",";
-      json += "\"time\": \"" + time + "\"";
-      json += "}";
+       String json;
+       json += "{";
+       json += "\"temperature\": " + String(temp) + ",";
+       json += "\"fan\": " + String(fanState) + ",";
+       json += "\"heater1\": " + String(heater1State) + ",";
+       json += "\"heater2\": " + String(heater2State) + ",";
+       json += "\"time\": \"" + time + "\"";
+       json += "}";
 
-      wm.server->send(200, "application/json", json);
+       wm.server->send(200, "application/json", json);
      });
      wm.server->on("/status", HTTP_GET, [=]()
                                           {
@@ -255,6 +255,7 @@ void setup()
       page += FPSTR(HTTP_BR);
       page += FPSTR(HTTP_BACKBTN);
       page += FPSTR(HTTP_END);
+
       wm.server->send(200, "text/html", page); }); });
 }
 
