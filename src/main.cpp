@@ -12,6 +12,36 @@
 #define HEATER_2_PIN D7
 #define THERMISTOR_PIN A0
 
+// Javascript to poll for updated values
+static const char SCRIPT_POLL[] PROGMEM = R"JS(
+<script>
+  (function () {
+    const $ = id => document.getElementById(id);
+
+    async function poll() {
+      try {
+        const res = await fetch('/values', { cache: 'no-store' });
+        if (!res.ok) return;
+        const j = await res.json();
+
+        if ($('temperature')) $('temperature').textContent =
+          (typeof j.temperature === 'number') ? j.temperature.toFixed(1) : j.temperature;
+
+        if ($('fan')) $('fan').textContent = j.fan ? 'On' : 'Off';
+        if ($('heater1')) $('heater1').textContent = j.heater1 ? 'On' : 'Off';
+        if ($('heater2')) $('heater2').textContent = j.heater2 ? 'On' : 'Off';
+        if ($('time')) $('time').textContent = j.time || '';
+      } catch (e) {
+        // ignore errors
+      }
+    }
+
+    poll();
+    setInterval(poll, 1000);
+  })();
+</script>
+)JS";
+
 WiFiManager wm;
 
 unsigned int wifiPortalTimeout = 180;
@@ -173,28 +203,51 @@ void setup()
 
   // Add custom routes to WiFiManager's web server
   wm.setWebServerCallback([&]()
-                          { wm.server->on("/status", HTTP_GET, [=]()
+                          {
+      wm.server->on("/values", HTTP_GET, [=]()
                                           {
       float temp = thermistor->readTempC();
+      bool fanState = digitalRead(FAN_PIN) == HIGH;
+      bool heater1State = digitalRead(HEATER_1_PIN) == HIGH;
+      bool heater2State = digitalRead(HEATER_2_PIN) == HIGH;
+      String time = timeClient.getFormattedTime();
+
+      String json;
+      json += "{";
+      json += "\"temperature\": " + String(temp) + ",";
+      json += "\"fan\": " + String(fanState) + ",";
+      json += "\"heater1\": " + String(heater1State) + ",";
+      json += "\"heater2\": " + String(heater2State) + ",";
+      json += "\"time\": \"" + time + "\"";
+      json += "}";
+
+      wm.server->send(200, "application/json", json);
+     });
+     wm.server->on("/status", HTTP_GET, [=]()
+                                          {
       String setPoint = setpointParam.getValueStr();
       String hysteresis = hysteresisParam.getValueStr();
       String fanTimeout = fanOverrunTimeParam.getValueStr();
       String ntpServer = ntpServerParam.getValue();
 
-      // XXX Move time and temperature into their own pages and update with JS
       String page;
       page += FPSTR(HTTP_HEAD_START);
       page.replace(FPSTR(T_v), "Status");
       page += FPSTR(HTTP_SCRIPT);
+      page += FPSTR(SCRIPT_POLL);
       page += FPSTR(HTTP_STYLE);
       page += FPSTR(HTTP_HEAD_END);
       page += FPSTR(HTTP_ROOT_MAIN);
       page.replace(FPSTR(T_t), "ShedHeater2000");
-      page.replace(FPSTR(T_v), "Status");
-      page += "<p>Current Time: " + timeClient.getFormattedTime() + " UTC</p>";
-      page += "<p>Time in sync? " + String(timeClient.isTimeSet() ? "Yes" : "No") + "</p>";
+      page.replace(FPSTR(T_v), "Time");
+      page += "<p><span id=\"time\"></span> UTC</p>";
+      page += "<p>In sync? " + String(timeClient.isTimeSet() ? "Yes" : "No") + "</p>";
       page += "<p>NTP Server: " + ntpServer + "</p>";
-      page += "<p>Temperature: " + String(temp, 1) + " &deg;C</p>";
+      page += "<h3>Current Status</h3>";
+      page += "<p>Temperature: <span id=\"temperature\"></span> &deg;C</p>";
+      page += "<p>Fan State: <span id=\"fan\"></span></p>";
+      page += "<p>Heater 1 State: <span id=\"heater1\"></span></p>";
+      page += "<p>Heater 2 State: <span id=\"heater2\"></span></p>";
       page += "<h3>Parameters</h3>";
       page += "<p>Setpoint: " + setPoint + " &deg;C</p>";
       page += "<p>Hysteresis: " + hysteresis + " &deg;C</p>";
