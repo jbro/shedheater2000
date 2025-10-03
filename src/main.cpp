@@ -30,6 +30,8 @@ static const char SCRIPT_POLL[] PROGMEM = R"JS(
         if ($('fan')) $('fan').textContent = j.fan ? 'On' : 'Off';
         if ($('heater1')) $('heater1').textContent = j.heater1 ? 'On' : 'Off';
         if ($('heater2')) $('heater2').textContent = j.heater2 ? 'On' : 'Off';
+        if ($('fanRunEnd')) $('fanRunEnd').textContent = (j.fanRunEnd - j.now) / 1000 || -1;
+        if ($('nextFanRun')) $('nextFanRun').textContent = (j.nextFanRun - j.now) / 1000 || -1;
         if ($('time')) $('time').textContent = j.time || '';
       } catch (e) {
         // ignore errors
@@ -52,13 +54,13 @@ bool startAP = false;
 class IntParameter : public WiFiManagerParameter
 {
 public:
-  IntParameter(const char *id, const char *placeholder, long value, const uint8_t length = 10)
+  IntParameter(const char *id, const char *placeholder, unsigned long value, const uint8_t length = 10)
       : WiFiManagerParameter("")
   {
     init(id, placeholder, String(value).c_str(), length, "", WFM_LABEL_BEFORE);
   }
 
-  long getValue()
+  unsigned long getValue()
   {
     return String(WiFiManagerParameter::getValue()).toInt();
   }
@@ -77,13 +79,20 @@ IntParameter fanTurnOnFrequencyParam("fanTurnOnFrequencyParam", "Fan Turn On Fre
 IntParameter fanRunTimeParam("fanRunTimeParam", "Fan Run Time (minutes)", 5);
 WiFiManagerParameter ntpServerParam("ntpServerParam", "NTP Server", "pool.ntp.org", 32);
 
+// Periodic fan scheduling
+unsigned long nextFanRun = 0;
+unsigned long fanRunEnd = 0;
+
+// now
+unsigned long now = millis();
+
 struct Config
 {
-  int setpoint;
-  int hysteresis;
-  int fanOverrunTime;
-  int fanTurnOnFrequency;
-  int fanRunTime;
+  unsigned long setpoint;
+  unsigned long hysteresis;
+  unsigned long fanOverrunTime;
+  unsigned long fanTurnOnFrequency;
+  unsigned long fanRunTime;
   char ntpServer[32];
 };
 
@@ -211,8 +220,6 @@ void setup()
   wm.addParameter(&fanRunTimeParam);
   wm.addParameter(&ntpServerParam);
 
-  // TODO implement hysteresis and fan run on time
-
   // Add custom routes to WiFiManager's web server
   wm.setWebServerCallback([&]()
                           {
@@ -230,6 +237,9 @@ void setup()
        json += "\"fan\": " + String(fanState) + ",";
        json += "\"heater1\": " + String(heater1State) + ",";
        json += "\"heater2\": " + String(heater2State) + ",";
+       json += "\"fanRunEnd\": " + String(fanRunEnd) + ",";
+       json += "\"nextFanRun\": " + String(nextFanRun) + ",";
+       json += "\"now\": " + String(now) + ",";
        json += "\"time\": \"" + time + "\"";
        json += "}";
 
@@ -259,6 +269,8 @@ void setup()
       page += "<p>NTP Server: " + ntpServer + "</p>";
       page += "<h3>Current Status</h3>";
       page += "<p>Temperature: <span id=\"temperature\"></span> &deg;C</p>";
+      page += "<p>Next Fan Run In: <span id=\"nextFanRun\"></span> seconds</p>";
+      page += "<p>Fan Run End In: <span id=\"fanRunEnd\"></span> seconds</p>";
       page += "<p>Fan State: <span id=\"fan\"></span></p>";
       page += "<p>Heater 1 State: <span id=\"heater1\"></span></p>";
       page += "<p>Heater 2 State: <span id=\"heater2\"></span></p>";
@@ -275,8 +287,50 @@ void setup()
       wm.server->send(200, "text/html", page); }); });
 }
 
+bool fanRunning = false;
+bool heatersRunning = false;
+bool firstRun = true;
+
+void turnOnFan()
+{
+  digitalWrite(FAN_PIN, HIGH);
+  fanRunning = true;
+}
+
+void turnOffFan()
+{
+  digitalWrite(FAN_PIN, LOW);
+  fanRunning = false;
+}
+
+void turnOnHeaters()
+{
+  turnOnFan(); // Ensure fan is on when heaters are on
+
+  digitalWrite(HEATER_1_PIN, HIGH);
+  digitalWrite(HEATER_2_PIN, HIGH);
+
+  heatersRunning = true;
+}
+
+void turnOffHeaters(long now)
+{
+  digitalWrite(HEATER_1_PIN, LOW);
+  digitalWrite(HEATER_2_PIN, LOW);
+
+  // If the fan is going to turn off sooner than the overrun time, extend it
+  if (now + (fanOverrunTimeParam.getValue() * 1000) > fanRunEnd)
+  {
+    fanRunEnd = now + (fanOverrunTimeParam.getValue() * 1000);
+  }
+
+  heatersRunning = false;
+}
+
 void loop()
 {
+  now = millis();
+
   // Update NTP Client
   timeClient.update();
 
@@ -292,4 +346,42 @@ void loop()
 
   // Handle WiFi Manager
   wm.process();
+
+  float currentTemp = thermistor->readTempC();
+
+  // Turn on the fan periodically independent of heating, skip first run
+  if (now > nextFanRun && fanTurnOnFrequencyParam.getValue() > 0)
+  {
+    // Next run is now
+    nextFanRun = now + (fanTurnOnFrequencyParam.getValue() * 60UL * 1000UL);
+
+    // Skip first run
+    if (firstRun)
+    {
+      firstRun = false;
+    }
+    else
+    {
+      turnOnFan();
+      fanRunEnd = now + (fanRunTimeParam.getValue() * 60UL * 1000UL);
+    }
+  }
+
+  // Turn on the heaters if the temperature is below the setpoint minus hysteresis
+  if (currentTemp < setpointParam.getValue() - hysteresisParam.getValue() && !heatersRunning)
+  {
+    turnOnHeaters();
+  }
+
+  // Turn off the heaters if the temperature is at or above the setpoint
+  if (currentTemp >= setpointParam.getValue() && heatersRunning)
+  {
+    turnOffHeaters(now);
+  }
+
+  // Turn off the fan if the heaters are off, and the fan run time has exceeded
+  if (!heatersRunning && now > fanRunEnd && fanRunning)
+  {
+    turnOffFan();
+  }
 }
