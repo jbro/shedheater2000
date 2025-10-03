@@ -73,6 +73,8 @@ public:
 IntParameter setpointParam("setpointParam", "Temperature Setpoint (°C)", 6);
 IntParameter hysteresisParam("hysteresisParam", "Hysteresis (°C)", 1);
 IntParameter fanOverrunTimeParam("fanOverrunTimeParam", "Fan Overrun Time (seconds)", 60);
+IntParameter fanTurnOnFrequencyParam("fanTurnOnFrequencyParam", "Fan Turn On Frequency (minutes)", 60);
+IntParameter fanRunTimeParam("fanRunTimeParam", "Fan Run Time (minutes)", 5);
 WiFiManagerParameter ntpServerParam("ntpServerParam", "NTP Server", "pool.ntp.org", 32);
 
 struct Config
@@ -80,6 +82,8 @@ struct Config
   int setpoint;
   int hysteresis;
   int fanOverrunTime;
+  int fanTurnOnFrequency;
+  int fanRunTime;
   char ntpServer[32];
 };
 
@@ -96,6 +100,8 @@ void onSaveParams()
       .setpoint = setpointParam.getValue(),
       .hysteresis = hysteresisParam.getValue(),
       .fanOverrunTime = fanOverrunTimeParam.getValue(),
+      .fanTurnOnFrequency = fanTurnOnFrequencyParam.getValue(),
+      .fanRunTime = fanRunTimeParam.getValue(),
   };
   const char *ntpServer = ntpServerParam.getValue();
   strncpy(config.ntpServer, ntpServer, sizeof(config.ntpServer));
@@ -135,6 +141,8 @@ void setup()
       .setpoint = setpointParam.getValue(),
       .hysteresis = hysteresisParam.getValue(),
       .fanOverrunTime = fanOverrunTimeParam.getValue(),
+      .fanTurnOnFrequency = fanTurnOnFrequencyParam.getValue(),
+      .fanRunTime = fanRunTimeParam.getValue(),
   };
   const char *defaultNtpServer = ntpServerParam.getValue();
   strncpy(config.ntpServer, defaultNtpServer, sizeof(config.ntpServer));
@@ -191,12 +199,16 @@ void setup()
   setpointParam.setValue(String(config.setpoint).c_str(), 10);
   hysteresisParam.setValue(String(config.hysteresis).c_str(), 10);
   fanOverrunTimeParam.setValue(String(config.fanOverrunTime).c_str(), 10);
+  fanTurnOnFrequencyParam.setValue(String(config.fanTurnOnFrequency).c_str(), 10);
+  fanRunTimeParam.setValue(String(config.fanRunTime).c_str(), 10);
   ntpServerParam.setValue(config.ntpServer, 32);
 
   // Add custom parameters
   wm.addParameter(&setpointParam);
   wm.addParameter(&hysteresisParam);
   wm.addParameter(&fanOverrunTimeParam);
+  wm.addParameter(&fanTurnOnFrequencyParam);
+  wm.addParameter(&fanRunTimeParam);
   wm.addParameter(&ntpServerParam);
 
   // TODO implement hysteresis and fan run on time
@@ -228,6 +240,8 @@ void setup()
       String setPoint = setpointParam.getValueStr();
       String hysteresis = hysteresisParam.getValueStr();
       String fanTimeout = fanOverrunTimeParam.getValueStr();
+      String fanTurnOnFrequency = fanTurnOnFrequencyParam.getValueStr();
+      String fanRunTime = fanRunTimeParam.getValueStr();
       String ntpServer = ntpServerParam.getValue();
 
       String page;
@@ -252,6 +266,8 @@ void setup()
       page += "<p>Setpoint: " + setPoint + " &deg;C</p>";
       page += "<p>Hysteresis: " + hysteresis + " &deg;C</p>";
       page += "<p>Fan Overrun Time: " + fanTimeout + " seconds</p>";
+      page += "<p>Fan Turn On Frequency: " + fanTurnOnFrequency + " minutes</p>";
+      page += "<p>Fan Run Time: " + fanRunTime + " minutes</p>";
       page += FPSTR(HTTP_BR);
       page += FPSTR(HTTP_BACKBTN);
       page += FPSTR(HTTP_END);
