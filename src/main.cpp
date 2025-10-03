@@ -4,6 +4,7 @@
 #include <thermistor.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <EEPROM.h>
 
 #define FAN_PIN D2
 #define CLEAR_BTN_PIN D5
@@ -39,15 +40,40 @@ public:
 };
 
 // Custom Parameters
-IntParameter setpointParam("setpointParam", "Temperature Setpoint (°C)", 5);
+IntParameter setpointParam("setpointParam", "Temperature Setpoint (°C)", 6);
 IntParameter hysteresisParam("hysteresisParam", "Hysteresis (°C)", 1);
 IntParameter fanOverrunTimeParam("fanOverrunTimeParam", "Fan Overrun Time (seconds)", 60);
 WiFiManagerParameter ntpServerParam("ntpServerParam", "NTP Server", "pool.ntp.org", 32);
+
+struct Config
+{
+  int setpoint;
+  int hysteresis;
+  int fanOverrunTime;
+  char ntpServer[32];
+};
 
 Thermistor *thermistor;
 
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, ntpServerParam.getValue(), 0, 3600); // Update every hour
+
+void onSaveParams()
+{
+  Serial.println("Saving config");
+
+  Config config = {
+      .setpoint = setpointParam.getValue(),
+      .hysteresis = hysteresisParam.getValue(),
+      .fanOverrunTime = fanOverrunTimeParam.getValue(),
+  };
+  const char *ntpServer = ntpServerParam.getValue();
+  strncpy(config.ntpServer, ntpServer, sizeof(config.ntpServer));
+  EEPROM.put(0, config);
+  EEPROM.commit();
+
+  timeClient.setPoolServerName(ntpServer);
+}
 
 void setup()
 {
@@ -68,11 +94,34 @@ void setup()
 
   pinMode(CLEAR_BTN_PIN, INPUT_PULLUP);
 
+  // Start Serial for debug output
+  Serial.begin(115200);
+  delay(300);
+
+  EEPROM.begin(sizeof(Config));
+
+  // Config default values
+  Config config = {
+      .setpoint = setpointParam.getValue(),
+      .hysteresis = hysteresisParam.getValue(),
+      .fanOverrunTime = fanOverrunTimeParam.getValue(),
+  };
+  const char *defaultNtpServer = ntpServerParam.getValue();
+  strncpy(config.ntpServer, defaultNtpServer, sizeof(config.ntpServer));
+
   // Forget wifi credentials
   if (digitalRead(CLEAR_BTN_PIN) == LOW)
   {
-    Serial.println("Button held on startup, clearing WiFi credentials");
+    Serial.println("Button held on startup...");
+
+    Serial.println("Clearing WiFi credentials");
     wm.resetSettings();
+
+    Serial.println("Restore default values to EEPROM");
+    EEPROM.put(0, config);
+    EEPROM.commit();
+
+    timeClient.forceUpdate();
   }
 
   // Setup Thermistors
@@ -81,9 +130,6 @@ void setup()
   // Set WiFi to station mode
   WiFi.mode(WIFI_STA);
 
-  // Start Serial for debug output
-  Serial.begin(115200);
-  delay(300);
   Serial.println("Ready");
 
   wm.setHostname("shedheater2000");
@@ -107,15 +153,22 @@ void setup()
   // Add your custom menu HTML (e.g., a link to /status)
   wm.setCustomMenuHTML("<form action='/status' method='get'><button>Status</button></form><br />");
 
+  // Register the save callback
+  wm.setSaveParamsCallback(onSaveParams);
+
+  // Restore parameters from EEPROM
+  EEPROM.get(0, config);
+  setpointParam.setValue(String(config.setpoint).c_str(), 10);
+  hysteresisParam.setValue(String(config.hysteresis).c_str(), 10);
+  fanOverrunTimeParam.setValue(String(config.fanOverrunTime).c_str(), 10);
+  ntpServerParam.setValue(config.ntpServer, 32);
+
   // Add custom parameters
   wm.addParameter(&setpointParam);
   wm.addParameter(&hysteresisParam);
   wm.addParameter(&fanOverrunTimeParam);
   wm.addParameter(&ntpServerParam);
 
-  // TODO Restore parameter values from EEPROM
-  // TODO register a callback to save the custom parameters to EEPROM
-  // XXX don't save ntp server param to eeprom
   // TODO implement hysteresis and fan run on time
 
   // Add custom routes to WiFiManager's web server
@@ -126,6 +179,7 @@ void setup()
       String setPoint = setpointParam.getValueStr();
       String hysteresis = hysteresisParam.getValueStr();
       String fanTimeout = fanOverrunTimeParam.getValueStr();
+      String ntpServer = ntpServerParam.getValue();
 
       // XXX Move time and temperature into their own pages and update with JS
       String page;
@@ -138,6 +192,8 @@ void setup()
       page.replace(FPSTR(T_t), "ShedHeater2000");
       page.replace(FPSTR(T_v), "Status");
       page += "<p>Current Time: " + timeClient.getFormattedTime() + " UTC</p>";
+      page += "<p>Time in sync? " + String(timeClient.isTimeSet() ? "Yes" : "No") + "</p>";
+      page += "<p>NTP Server: " + ntpServer + "</p>";
       page += "<p>Temperature: " + String(temp, 1) + " &deg;C</p>";
       page += "<h3>Parameters</h3>";
       page += "<p>Setpoint: " + setPoint + " &deg;C</p>";
@@ -160,6 +216,7 @@ void loop()
   // Make sure the web portal is running if requested
   if (!wm.getConfigPortalActive() && !wm.getWebPortalActive())
   {
+    Serial.println("Webportal not running, starting");
     wm.startWebPortal();
   }
 
