@@ -172,7 +172,7 @@ void setup()
   }
 
   // Setup Thermistors
-  thermistor = new Thermistor(THERMISTOR_PIN, 3.3, 3.3, 1023, 10000, 10000, 27.8, 3380, 1, 0);
+  thermistor = new Thermistor(THERMISTOR_PIN, 3.3, 3.3, 1023, 10000, 10000, 27.8, 3380, 10, 10);
 
   // Set WiFi to station mode
   WiFi.mode(WIFI_STA);
@@ -347,6 +347,7 @@ void loop()
   // Handle WiFi Manager
   wm.process();
 
+  // This blocks for about 100ms, which is ok because it lets the wifi stack do its thing
   float currentTemp = thermistor->readTempC();
 
   // Turn on the fan periodically independent of heating, skip first run
@@ -384,6 +385,4 @@ void loop()
   {
     turnOffFan();
   }
-
-  delay(100);
 }
