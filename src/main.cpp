@@ -99,7 +99,7 @@ struct Config
 Thermistor *thermistor;
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, ntpServerParam.getValue(), 0, 3600); // Update every hour
+NTPClient timeClient(ntpUDP, ntpServerParam.getValue(), 0, 3600 * 1000); // Update every hour
 
 void onSaveParams()
 {
