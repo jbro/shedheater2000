@@ -10,14 +10,19 @@ The new controller implements a very simple hysteresis based temperature control
 
 The original controller was connected to the "motherboard" using a ribbon cable with 6 wires. The pinout is as follows:
 
-| Original cable | ESP8266 | Function             |
-|:--------------:|:-------:|:---------------------|
-| 5: A1          | A1      | Thermistor           |
-| 4: D2          | D2      | Fan Active High      |
-| 3: D7          | D7      | Heater 2 Active High |
-| 2: D6          | D6      | Heater 1 Active High |
-| 1: GND         | GND     | Ground               |
-| 0: +5          |         | +5V                  |
+| Original cable | ESP8266                        | Function             |
+|:--------------:|:------------------------------:|:--------------------:|
+| 5:             | A0 (10k resistor to 3.3V)      | Thermistor           |
+| 4:             | D2                             | Fan Active High      |
+| 3:             | D7                             | Heater 2 Active High |
+| 2:             | D6                             | Heater 1 Active High |
+| 1: GND         | GND                            | Ground               |
+| 0: +5          | 5V                             | +5V                  |
+
+| Button       | Pin |
+|:------------:|:---:|
+| Red          | RST |
+| Yellow       | D3  |
 
 ## BOM
 
