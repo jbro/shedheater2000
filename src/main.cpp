@@ -384,4 +384,6 @@ void loop()
   {
     turnOffFan();
   }
+
+  delay(100);
 }
