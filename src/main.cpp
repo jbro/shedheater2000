@@ -7,7 +7,7 @@
 #include <EEPROM.h>
 
 #define FAN_PIN D2
-#define CLEAR_BTN_PIN D5
+#define CLEAR_BTN_PIN D3
 #define HEATER_1_PIN D6
 #define HEATER_2_PIN D7
 #define THERMISTOR_PIN A0
