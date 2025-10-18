@@ -1,5 +1,7 @@
 # Shed Heater 2000
 
+![Shed Heater 2000](IMG_3562.jpeg)
+
 This is a simple mod for a cheap wall mountable heater.
 
 I've built it because the original controller didn't work as it was supposed to. So I figured out how the "motherboard" works, and made a new controller for it using an ESP8266.
