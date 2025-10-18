@@ -19,7 +19,7 @@ The original controller was connected to the "motherboard" using a ribbon cable 
 | 3:             | D7                             | Heater 2 Active High |
 | 2:             | D6                             | Heater 1 Active High |
 | 1: GND         | GND                            | Ground               |
-| 0: +5          | 5V                             | +5V                  |
+| 0: +5V         | 5V                             | Power                |
 
 | Button       | Pin |
 |:------------:|:---:|
