@@ -28,9 +28,9 @@ The original controller was connected to the "motherboard" using a ribbon cable 
 
 ## BOM
 
-- ESP8266 (I used a Wemos D1 Mini)
+- ESP8266 (Arbitrary dev board with external antenna connector)
 - 10k resistor
 - Two buttons
 - One panel mountable USB plug
 - One laser cut piece of MDF
-- One Hilink 5V 4A power supply (or similar)
+- An opto isolator board so it is safe to have USB connected while the heater is powered (optional but recommended)
