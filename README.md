@@ -28,9 +28,10 @@ The original controller was connected to the "motherboard" using a ribbon cable 
 
 ## BOM
 
+- Adler AD 7714 wall mountable heater
 - ESP8266 (Arbitrary dev board with external antenna connector)
 - 10k resistor
 - Two buttons
 - One panel mountable USB plug
-- One laser cut piece of MDF
+- One laser cut piece of MDF ([file here](shedheater2000.svg))
 - An opto isolator board so it is safe to have USB connected while the heater is powered (optional but recommended)
