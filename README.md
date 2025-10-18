@@ -6,7 +6,7 @@ This is a simple mod for a cheap wall mountable heater.
 
 I've built it because the original controller didn't work as it was supposed to. So I figured out how the "motherboard" works, and made a new controller for it using an ESP8266.
 
-The new controller implements a very simple hysteresis based temperature control, which should keep my shed above freezing during winter.
+The new controller implements a very simple hysteresis based temperature control, which should keep my shed above freezing during winter. It also has the option to run the fan for a scheduled time, to help distribute the air around the shed.
 
 ## Hardware
 
