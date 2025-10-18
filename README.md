@@ -21,10 +21,10 @@ The original controller was connected to the "motherboard" using a ribbon cable 
 | 1: GND         | GND                            | Ground               |
 | 0: +5V         | 5V                             | Power                |
 
-| Button       | Pin |
-|:------------:|:---:|
-| Red          | RST |
-| Yellow       | D3  |
+| Button       | Pin | Function                                                                                                                |
+|:------------:|:---:| :----------------------------------------------------------------------------------------------------------------------:|
+| Red          | RST | Reset                                                                                                                   |
+| Yellow       | D3  | When held during power up, go into flash mode. If pushed during start up, clear WiFi config and restore EEPROM defaults |
 
 ## BOM
 
