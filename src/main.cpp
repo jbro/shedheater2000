@@ -138,7 +138,7 @@ struct Config
 Thermistor *thermistor;
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, ntpServerParam.getValue(), 0, 3600 * 1000); // Update every hour
+NTPClient timeClient(ntpUDP, "", 0, 3600UL * 1000UL); // Update every hour
 
 void onSaveParams()
 {
@@ -211,8 +211,6 @@ void setup()
     Serial.println("Restore default values to EEPROM");
     EEPROM.put(0, config);
     EEPROM.commit();
-
-    timeClient.forceUpdate();
   }
 
   // Setup Thermistors
@@ -224,10 +222,6 @@ void setup()
   // Set host name and start mDNS
   wm.setHostname("shedheater2000");
   MDNS.begin("shedheater2000");
-
-  // Start config portal if wifi isn't connecting
-  wm.setConfigPortalTimeout(wifiPortalTimeout);
-  wm.autoConnect("shedheater2000-Setup");
 
   // Set up custom menu
   const char *menu[] = {"custom", "param", "info"};
@@ -263,6 +257,17 @@ void setup()
 
   // Initialize fan overrun timer in the past so fan doesn't turn on immediately on boot
   HeatersLastOn = now - fanOverrunTimeMs;
+
+  // Set NTP server from config
+  timeClient.setPoolServerName(ntpServerParam.getValue());
+
+  Serial.println("Config Restored:");
+  Serial.printf(" Setpoint: %ld °C\n", config.setpoint);
+  Serial.printf(" Hysteresis: %ld °C\n", config.hysteresis);
+  Serial.printf(" Fan Overrun Time: %ld s\n", config.fanOverrunTime);
+  Serial.printf(" Fan Turn On Frequency: %ld s\n", config.fanTurnOnFrequency);
+  Serial.printf(" Fan Run Time: %ld min\n", config.fanRunTime);
+  Serial.printf(" NTP Server: %s\n", config.ntpServer);
 
   // Add custom routes to WiFiManager's web server
   wm.setWebServerCallback([&]()
@@ -339,6 +344,10 @@ void setup()
       page += FPSTR(HTTP_END);
 
       wm.server->send(200, "text/html", page); }); });
+
+  // Start config portal if wifi isn't connecting
+  wm.setConfigPortalTimeout(wifiPortalTimeout);
+  wm.autoConnect("shedheater2000-Setup");
 }
 
 void setFan(bool on)
@@ -450,11 +459,17 @@ void loop()
   // Update current time
   now = millis();
 
-  // Update NTP Client
-  timeClient.update();
+  // Update NTP Client if connected to WiFi
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    timeClient.update();
+  }
 
-  // Send mDNS update
-  MDNS.update();
+  // Send mDNS update if connected to WiFi
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    MDNS.update();
+  }
 
   // Make sure the web portal is running even if someone closed it in the web UI
   if (!wm.getConfigPortalActive() && !wm.getWebPortalActive())
