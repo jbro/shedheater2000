@@ -1,17 +1,20 @@
 #include <Arduino.h>
+#include <WiFiManager.h>
 #include <thermistor.h>
 #include <DHT_Async.h>
-// #include <WiFiManager.h>
 // #include <ESP8266mDNS.h>
 // #include <NTPClient.h>
 // #include <WiFiUdp.h>
 // #include <EEPROM.h>
 // #include <ArduinoMqttClient.h>
 
-#define CLEAR_BTN_PIN D3
-
-// Time tracking variable
+// Holds the current time in milliseconds
 unsigned long now;
+
+// Set up WifiManager
+#define CLEAR_BTN_PIN D3
+WiFiManager wm;
+const unsigned long WIFI_CONFIG_TIMEOUT_S = 2ul * 60ul;
 
 // Set up internal DHT22 sensor
 void readInternalSensor();
@@ -83,6 +86,8 @@ void setup()
   pinMode(THERMISTOR_PIN, INPUT);
   pinMode(CLEAR_BTN_PIN, INPUT_PULLUP);
 
+  WiFi.mode(WIFI_STA);
+
   // Start Serial for debug output
   Serial.begin(115200);
   delay(300);
@@ -107,17 +112,37 @@ void setup()
 
   // Print the configuration parameters
   printParameters();
+
+  // Erase settings if button is held during boot
+  if (digitalRead(CLEAR_BTN_PIN) == LOW)
+  {
+    Serial.println("Clearing WiFi settings...");
+    wm.resetSettings();
+  }
+
+  // Setup wifi manager
+  wm.setConfigPortalTimeout(WIFI_CONFIG_TIMEOUT_S);
+  wm.setWiFiAutoReconnect(true);
+  wm.setConfigPortalBlocking(false);
+
+  // Attempt to connect to saved WiFi
+  wm.autoConnect("ShedHeater2000_Config");
 }
 
 void loop()
 {
+  wm.process();
+
   // Update current time
   now = millis();
 
+  // Read sensors, control heater and fan
   readInternalSensor();
   readExternalSensor();
   controlHeater();
   controlFan();
+
+  // Print status periodically
   printStatus();
 
   yield();
@@ -285,6 +310,9 @@ void printStatus()
 {
   if (now - lastStatusPrint >= STATUS_PRINT_INTERVAL_MS)
   {
+    Serial.print("Time: ");
+    Serial.print(now / 1000);
+    Serial.print(" s | ");
     Serial.print("Internal Temp: ");
     Serial.print(internalTemperature);
     Serial.print(" C, Humidity: ");
@@ -298,6 +326,13 @@ void printStatus()
     Serial.print(fanState ? "ON" : "OFF");
     Serial.print(" | Scheduled Fan Run: ");
     Serial.print(fanScheduledRun ? "YES" : "NO");
+    Serial.print(" | WiFi Connected: ");
+    Serial.print(WiFi.status() == WL_CONNECTED ? "YES" : "NO");
+    Serial.print(" | WiFi SSID: ");
+    Serial.print(WiFi.SSID());
+    Serial.print(" | WiFi RSSI: ");
+    Serial.print(WiFi.RSSI());
+    Serial.print(" dBm");
     Serial.println();
 
     lastStatusPrint = now;
