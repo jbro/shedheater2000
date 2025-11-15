@@ -1,8 +1,8 @@
 #include <Arduino.h>
-#include <WiFiManager.h>
+#include <ESP8266WiFi.h>
+#include "secrets.h"
 #include <thermistor.h>
 #include <DHT_Async.h>
-#include <ESP8266mDNS.h>
 // #include <NTPClient.h>
 // #include <WiFiUdp.h>
 // #include <EEPROM.h>
@@ -11,16 +11,15 @@
 // Holds the current time in milliseconds
 unsigned long now;
 
-// Set up WifiManager
-#define CLEAR_BTN_PIN D3
-WiFiManager wm;
-const unsigned long WIFI_CONFIG_TIMEOUT_S = 2ul * 60ul;
+// Set up Wifi
+const unsigned long WIFI_CONNECT_RETRY_INTERVAL_MS = 10ul * 1000ul;
+unsigned long lastWiFiConnectAttempt;
 
 // Set up internal DHT22 sensor
 void readInternalSensor();
 #define DHT22_PIN D5
 DHT_Async internalSensor(DHT22_PIN, DHT_TYPE_22);
-const unsigned long DHT_READ_INTERVAL_MS = 2000ul;
+const unsigned long DHT_READ_INTERVAL_MS = 5ul * 1000ul;
 unsigned long lastDHTRead;
 float internalTemperature = NAN;
 float internalHumidity = NAN;
@@ -71,7 +70,7 @@ unsigned long lastHeaterOn;
 // Set up status printer
 void printStatus();
 void printParameters();
-const unsigned long STATUS_PRINT_INTERVAL_MS = 1000ul;
+const unsigned long STATUS_PRINT_INTERVAL_MS = 1ul * 1000ul;
 unsigned long lastStatusPrint;
 
 void setup()
@@ -84,7 +83,6 @@ void setup()
   pinMode(HEATER_2_PIN, OUTPUT);
   digitalWrite(HEATER_2_PIN, LOW);
   pinMode(THERMISTOR_PIN, INPUT);
-  pinMode(CLEAR_BTN_PIN, INPUT_PULLUP);
 
   WiFi.mode(WIFI_STA);
 
@@ -94,11 +92,12 @@ void setup()
 
   // Set timers to start values
   now = millis();
-  lastDHTRead = now - DHT_READ_INTERVAL_MS;                    // Force immediate DHT read
-  lastExternalTempRead = now - EXTERNAL_TEMP_READ_INTERVAL_MS; // Force immediate external temp read
-  lastFanOn = now;                                             // Pretend the fan was just turned on on startup, so we run for the first time after FAN_TURN_ON_FREQ_MS
-  lastHeaterOn = now - FAN_OVERRUN_MS;                         // The heater has never been on
-  lastStatusPrint = now;                                       // We are okay to wait STATUS_PRINT_INTERVAL_MS before first print
+  lastWiFiConnectAttempt = now - WIFI_CONNECT_RETRY_INTERVAL_MS; // Force immediate WiFi connect attempt
+  lastDHTRead = now - DHT_READ_INTERVAL_MS;                      // Force immediate DHT read
+  lastExternalTempRead = now - EXTERNAL_TEMP_READ_INTERVAL_MS;   // Force immediate external temp read
+  lastFanOn = now;                                               // Pretend the fan was just turned on on startup, so we run for the first time after FAN_TURN_ON_FREQ_MS
+  lastHeaterOn = now - FAN_OVERRUN_MS;                           // The heater has never been on
+  lastStatusPrint = now;                                         // We are okay to wait STATUS_PRINT_INTERVAL_MS before first print
 
   // Initialize external temperature readings to NAN
   for (size_t i = 0; i < EXTERNAL_TEMP_SMOOTHING_COUNT; ++i)
@@ -112,32 +111,22 @@ void setup()
 
   // Print the configuration parameters
   printParameters();
-
-  // Erase settings if button is held during boot
-  if (digitalRead(CLEAR_BTN_PIN) == LOW)
-  {
-    Serial.println("Clearing WiFi settings...");
-    wm.resetSettings();
-  }
-
-  // Setup wifi manager
-  wm.setConfigPortalTimeout(WIFI_CONFIG_TIMEOUT_S);
-  wm.setWiFiAutoReconnect(true);
-  wm.setConfigPortalBlocking(false);
-
-  // Attempt to connect to saved WiFi
-  wm.autoConnect("ShedHeater2000_Config");
-
-  // Start MDNS
-  MDNS.begin("shedheater2000");
 }
 
 void loop()
 {
-  wm.process();
-
   // Update current time
   now = millis();
+
+  // If WiFi is not connected, attempt to connect
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    if (now - lastWiFiConnectAttempt >= WIFI_CONNECT_RETRY_INTERVAL_MS)
+    {
+      WiFi.begin(ssid, password);
+      lastWiFiConnectAttempt = now;
+    }
+  }
 
   // Read sensors, control heater and fan
   readInternalSensor();
@@ -148,14 +137,7 @@ void loop()
   // If wifi is connected
   if (WiFi.status() == WL_CONNECTED)
   {
-    // Publish MDNS
-    MDNS.update();
-
-    // If web portal is not active, enable it
-    if (!wm.getWebPortalActive())
-    {
-      wm.startWebPortal();
-    }
+    ;
   }
 
   // Print status periodically
@@ -281,6 +263,13 @@ void controlFan()
 
 void controlHeater()
 {
+  // Safety check: if external temperature is invalid, turn off heater
+  if (isnan(externalTemperature))
+  {
+    turnOffHeater();
+    return;
+  }
+
   if (externalTemperature < HEATER_SETPOINT_TEMPERATURE - HEATER_HYSTERESIS)
   {
     if (!heaterState)
@@ -349,6 +338,9 @@ void printStatus()
     Serial.print(" | WiFi RSSI: ");
     Serial.print(WiFi.RSSI());
     Serial.print(" dBm");
+    Serial.print(" | Free Heap: ");
+    Serial.print(ESP.getFreeHeap());
+    Serial.print(" bytes");
     Serial.println();
 
     lastStatusPrint = now;
