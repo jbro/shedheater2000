@@ -2,7 +2,7 @@
 #include <WiFiManager.h>
 #include <thermistor.h>
 #include <DHT_Async.h>
-// #include <ESP8266mDNS.h>
+#include <ESP8266mDNS.h>
 // #include <NTPClient.h>
 // #include <WiFiUdp.h>
 // #include <EEPROM.h>
@@ -127,6 +127,9 @@ void setup()
 
   // Attempt to connect to saved WiFi
   wm.autoConnect("ShedHeater2000_Config");
+
+  // Start MDNS
+  MDNS.begin("shedheater2000");
 }
 
 void loop()
@@ -141,6 +144,19 @@ void loop()
   readExternalSensor();
   controlHeater();
   controlFan();
+
+  // If wifi is connected
+  if (WiFi.status() == WL_CONNECTED)
+  {
+    // Publish MDNS
+    MDNS.update();
+
+    // If web portal is not active, enable it
+    if (!wm.getWebPortalActive())
+    {
+      wm.startWebPortal();
+    }
+  }
 
   // Print status periodically
   printStatus();
