@@ -3,9 +3,8 @@
 #include "secrets.h"
 #include <thermistor.h>
 #include <DHT_Async.h>
-// #include <NTPClient.h>
-// #include <WiFiUdp.h>
-// #include <EEPROM.h>
+#include <NTPClient.h>
+#include <WiFiUdp.h>
 // #include <ArduinoMqttClient.h>
 
 // Holds the current time in milliseconds
@@ -14,6 +13,10 @@ unsigned long now;
 // Set up Wifi
 const unsigned long WIFI_CONNECT_RETRY_INTERVAL_MS = 10ul * 1000ul;
 unsigned long lastWiFiConnectAttempt;
+
+// Set up NTP Client
+WiFiUDP ntpUDP;
+NTPClient timeClient(ntpUDP, "dk.pool.ntp.org", 0, 3600 * 1000); // Update every hour
 
 // Set up internal DHT22 sensor
 void readInternalSensor();
@@ -137,7 +140,8 @@ void loop()
   // If wifi is connected
   if (WiFi.status() == WL_CONNECTED)
   {
-    ;
+    // Update NTP client
+    timeClient.update();
   }
 
   // Print status periodically
@@ -316,6 +320,12 @@ void printStatus()
   if (now - lastStatusPrint >= STATUS_PRINT_INTERVAL_MS)
   {
     Serial.print("Time: ");
+    Serial.print(timeClient.getFormattedTime());
+    Serial.print(" | ");
+    Serial.print("Time synced: ");
+    Serial.print(timeClient.isTimeSet() ? "YES" : "NO");
+    Serial.print(" | ");
+    Serial.print("Uptime: ");
     Serial.print(now / 1000);
     Serial.print(" s | ");
     Serial.print("Internal Temp: ");
