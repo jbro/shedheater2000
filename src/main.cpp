@@ -5,7 +5,7 @@
 #include <DHT_Async.h>
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-// #include <ArduinoMqttClient.h>
+#include <ArduinoMqttClient.h>
 
 // Holds the current time in milliseconds
 unsigned long now;
@@ -18,11 +18,22 @@ unsigned long lastWiFiConnectAttempt;
 WiFiUDP ntpUDP;
 NTPClient timeClient(ntpUDP, "dk.pool.ntp.org", 0, 3600 * 1000); // Update every hour
 
+// Set up mqtt
+void publishMqttData();
+WiFiClient wifiClient;
+MqttClient mqttClient(wifiClient);
+const char MQTT_BROKER[] = "10.1.1.1";
+const int MQTT_PORT = 1883;
+const char MQTT_CLIENT_ID[] = "shedheater2000";
+const char MQTT_TOPIC[] = "shed/heater2000/status";
+const unsigned long MQTT_PUBLISH_INTERVAL_MS = 1ul * 1000ul;
+unsigned long lastMqttPublish;
+
 // Set up internal DHT22 sensor
 void readInternalSensor();
 #define DHT22_PIN D5
 DHT_Async internalSensor(DHT22_PIN, DHT_TYPE_22);
-const unsigned long DHT_READ_INTERVAL_MS = 5ul * 1000ul;
+const unsigned long DHT_READ_INTERVAL_MS = 2ul * 1000ul;
 unsigned long lastDHTRead;
 float internalTemperature = NAN;
 float internalHumidity = NAN;
@@ -114,6 +125,9 @@ void setup()
 
   // Print the configuration parameters
   printParameters();
+
+  // Set mqtt client id
+  mqttClient.setId(MQTT_CLIENT_ID);
 }
 
 void loop()
@@ -142,12 +156,44 @@ void loop()
   {
     // Update NTP client
     timeClient.update();
+
+    // Send MQTT data periodically
+    publishMqttData();
   }
 
   // Print status periodically
   printStatus();
 
   yield();
+}
+
+void publishMqttData()
+{
+  if (now - lastMqttPublish >= MQTT_PUBLISH_INTERVAL_MS)
+  {
+    if (!mqttClient.connected())
+    {
+      mqttClient.connect(MQTT_BROKER, MQTT_PORT);
+    }
+
+    if (mqttClient.connected())
+    {
+      // Send status message as CSV
+      String payload = String(timeClient.getEpochTime()) + "," +
+                       String(internalTemperature) + "," +
+                       String(internalHumidity) + "," +
+                       String(externalTemperature) + "," +
+                       String(heaterState ? 1 : 0) + "," +
+                       String(fanState ? 1 : 0) + "," +
+                       String(fanScheduledRun ? 1 : 0);
+
+      mqttClient.beginMessage(MQTT_TOPIC);
+      mqttClient.print(payload);
+      mqttClient.endMessage();
+    }
+
+    lastMqttPublish = now;
+  }
 }
 
 void readInternalSensor()
@@ -348,6 +394,8 @@ void printStatus()
     Serial.print(" | WiFi RSSI: ");
     Serial.print(WiFi.RSSI());
     Serial.print(" dBm");
+    Serial.print(" | MQTT Connected: ");
+    Serial.print(mqttClient.connected() ? "YES" : "NO");
     Serial.print(" | Free Heap: ");
     Serial.print(ESP.getFreeHeap());
     Serial.print(" bytes");
