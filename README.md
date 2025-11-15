@@ -26,6 +26,10 @@ The original controller was connected to the "motherboard" using a ribbon cable 
 | Red          | RST | Reset                                                                                                                   |
 | Yellow       | D3  | When held during power up, go into flash mode. If pushed during start up, clear WiFi config and restore EEPROM defaults |
 
+| Sensor | Pin | Function                 |
+|:------:|:---:|:------------------------:|
+| DHT22  | D5  | Temperature and Humidity |
+
 ## BOM
 
 - Adler AD 7714 wall mountable heater
