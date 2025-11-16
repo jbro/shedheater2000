@@ -315,14 +315,14 @@ void controlFan()
 void controlHeater()
 {
   // Safety check: if external temperature is invalid, turn off heater
-  if (isnan(externalTemperature))
+  if (isnan(internalTemperature))
   {
     turnOffHeater();
 
     return;
   }
 
-  if (externalTemperature < HEATER_SETPOINT_TEMPERATURE - HEATER_HYSTERESIS)
+  if (internalTemperature < HEATER_SETPOINT_TEMPERATURE - HEATER_HYSTERESIS)
   {
     if (!heaterState)
     {
@@ -331,7 +331,7 @@ void controlHeater()
     }
   }
 
-  if (externalTemperature > HEATER_SETPOINT_TEMPERATURE + HEATER_HYSTERESIS)
+  if (internalTemperature > HEATER_SETPOINT_TEMPERATURE + HEATER_HYSTERESIS)
   {
     if (heaterState)
     {
