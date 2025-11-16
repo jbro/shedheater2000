@@ -115,7 +115,7 @@ void setup()
   lastDHTRead = now - DHT_READ_INTERVAL_MS;                      // Force immediate DHT read
   lastExternalTempRead = now - EXTERNAL_TEMP_READ_INTERVAL_MS;   // Force immediate external temp read
   lastFanOn = now;                                               // Pretend the fan was just turned on on startup, so we run for the first time after FAN_TURN_ON_FREQ_MS
-  fanRunTimeStart = 0;                                           // Initialize fan run time
+  fanRunTimeStart = now;                                         // Initialize fan run time
   lastHeaterOff = now - FAN_OVERRUN_MS;                          // The heater has never been on
   lastStatusPrint = now;                                         // We are okay to wait STATUS_PRINT_INTERVAL_MS before first print
 
@@ -267,6 +267,9 @@ void turnOnFan()
     // Record the time the fan was turned on
     fanRunTimeStart = now;
   }
+
+  fanRunTimeAccumulated += now - fanRunTimeStart;
+  fanRunTimeStart = now;
 }
 
 void turnOffFan()
@@ -279,7 +282,7 @@ void turnOffFan()
 
     // Update accumulated fan run time
     fanRunTimeAccumulated += now - fanRunTimeStart;
-    fanRunTimeStart = 0;
+    fanRunTimeStart = now;
   }
 }
 
