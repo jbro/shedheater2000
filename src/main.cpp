@@ -79,7 +79,7 @@ void turnOffHeater();
 const float HEATER_SETPOINT_TEMPERATURE = 5.0f; // Target temperature to maintain in Celsius
 const float HEATER_HYSTERESIS = 0.5f;           // Hysteresis for temperature control
 bool heaterState = false;
-unsigned long lastHeaterOn;
+unsigned long lastHeaterOff;
 
 // Set up status printer
 void printStatus();
@@ -110,7 +110,7 @@ void setup()
   lastDHTRead = now - DHT_READ_INTERVAL_MS;                      // Force immediate DHT read
   lastExternalTempRead = now - EXTERNAL_TEMP_READ_INTERVAL_MS;   // Force immediate external temp read
   lastFanOn = now;                                               // Pretend the fan was just turned on on startup, so we run for the first time after FAN_TURN_ON_FREQ_MS
-  lastHeaterOn = now - FAN_OVERRUN_MS;                           // The heater has never been on
+  lastHeaterOff = now - FAN_OVERRUN_MS;                          // The heater has never been on
   lastStatusPrint = now;                                         // We are okay to wait STATUS_PRINT_INTERVAL_MS before first print
 
   // Initialize external temperature readings to NAN
@@ -267,6 +267,7 @@ void turnOffHeater()
 {
   digitalWrite(HEATER_1_PIN, LOW);
   digitalWrite(HEATER_2_PIN, LOW);
+  lastHeaterOff = now;
   heaterState = false;
 }
 
@@ -294,7 +295,7 @@ void controlFan()
   }
 
   // If we are in the fan overrun period, keep the fan on
-  if (now - lastHeaterOn < FAN_OVERRUN_MS)
+  if (now - lastHeaterOff <= FAN_OVERRUN_MS)
   {
     turnOnFan();
     return;
@@ -317,6 +318,7 @@ void controlHeater()
   if (isnan(externalTemperature))
   {
     turnOffHeater();
+
     return;
   }
 
@@ -325,8 +327,6 @@ void controlHeater()
     if (!heaterState)
     {
       turnOnHeater();
-      lastHeaterOn = now;
-
       return;
     }
   }
