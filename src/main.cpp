@@ -191,15 +191,17 @@ void publishMqttData()
     if (mqttClient.connected())
     {
       // Send status message as CSV
-      String payload = String(timeClient.getEpochTime()) + "," + // Current epoch time
-                       String(now / 1000) + "," +                // Uptime in seconds
-                       String(internalTemperature) + "," +       // Internal temperature
-                       String(internalHumidity) + "," +          // Internal humidity
-                       String(externalTemperature) + "," +       // External temperature
-                       String(heaterState ? 1 : 0) + "," +       // Heater state
-                       String(fanState ? 1 : 0) + "," +          // Fan state
-                       String(fanScheduledRun ? 1 : 0) + "," +   // Fan scheduled run
-                       String(fanRunTimeAccumulated);            // Fan run time accumulated
+      String payload = String(timeClient.getEpochTime()) + "," +      // Current epoch time
+                       String(timeClient.isTimeSet() ? 1 : 0) + "," + // Time synced state
+                       String(now / 1000) + "," +                     // Uptime in seconds
+                       String(WiFi.RSSI()) + "," +                    // WiFi RSSI
+                       String(internalTemperature) + "," +            // Internal temperature
+                       String(internalHumidity) + "," +               // Internal humidity
+                       String(externalTemperature) + "," +            // External temperature
+                       String(heaterState ? 1 : 0) + "," +            // Heater state
+                       String(fanState ? 1 : 0) + "," +               // Fan state
+                       String(fanScheduledRun ? 1 : 0) + "," +        // Fan scheduled run
+                       String(fanRunTimeAccumulated);                 // Fan run time accumulated
 
       mqttClient.beginMessage(MQTT_TOPIC);
       mqttClient.print(payload);
