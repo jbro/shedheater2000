@@ -267,7 +267,13 @@ void turnOffHeater()
 {
   digitalWrite(HEATER_1_PIN, LOW);
   digitalWrite(HEATER_2_PIN, LOW);
-  lastHeaterOff = now;
+
+  // Only update lastHeaterOff when the heater was previously on
+  if (heaterState)
+  {
+    lastHeaterOff = now;
+  }
+
   heaterState = false;
 }
 
