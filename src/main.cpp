@@ -101,6 +101,9 @@ void setup()
   pinMode(THERMISTOR_PIN, INPUT);
 
   WiFi.mode(WIFI_STA);
+  WiFi.hostname(MQTT_CLIENT_ID);
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(true);
 
   // Start Serial for debug output
   Serial.begin(115200);
@@ -131,6 +134,9 @@ void setup()
 
   // Set mqtt client id
   mqttClient.setId(MQTT_CLIENT_ID);
+
+  // Start NTP client
+  timeClient.begin();
 }
 
 void loop()
@@ -159,6 +165,9 @@ void loop()
   {
     // Update NTP client
     timeClient.update();
+
+    // Keep MQTT client alive
+    mqttClient.poll();
 
     // Send MQTT data periodically
     publishMqttData();
