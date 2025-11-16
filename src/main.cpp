@@ -325,7 +325,6 @@ void controlFan()
       fanScheduledRun = true;
     }
 
-    fanRunTimeAccumulated = 0;
     lastFanOn = now;
   }
 
@@ -333,6 +332,8 @@ void controlFan()
   if (fanScheduledRun && (now - lastFanOn >= FAN_RUN_TIME_MS))
   {
     fanScheduledRun = false;
+
+    fanRunTimeAccumulated = 0;
   }
 
   // If the heater is on, ensure the fan is on
