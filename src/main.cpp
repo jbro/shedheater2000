@@ -71,6 +71,8 @@ const unsigned long FAN_RUN_TIME_MS = 5ul * 60ul * 1000ul;      // Fan run time 
 bool fanState = false;
 bool fanScheduledRun = false;
 unsigned long lastFanOn;
+unsigned long fanRunTimeAccumulated = 0; // Total fan run time accumulated in current schedule
+unsigned long fanRunTimeStart;           // Time when the fan was turned on for fan run
 void controlHeater();
 void turnOnHeater();
 void turnOffHeater();
@@ -110,6 +112,7 @@ void setup()
   lastDHTRead = now - DHT_READ_INTERVAL_MS;                      // Force immediate DHT read
   lastExternalTempRead = now - EXTERNAL_TEMP_READ_INTERVAL_MS;   // Force immediate external temp read
   lastFanOn = now;                                               // Pretend the fan was just turned on on startup, so we run for the first time after FAN_TURN_ON_FREQ_MS
+  fanRunTimeStart = 0;                                           // Initialize fan run time
   lastHeaterOff = now - FAN_OVERRUN_MS;                          // The heater has never been on
   lastStatusPrint = now;                                         // We are okay to wait STATUS_PRINT_INTERVAL_MS before first print
 
@@ -185,7 +188,8 @@ void publishMqttData()
                        String(externalTemperature) + "," +
                        String(heaterState ? 1 : 0) + "," +
                        String(fanState ? 1 : 0) + "," +
-                       String(fanScheduledRun ? 1 : 0);
+                       String(fanScheduledRun ? 1 : 0) + "," +
+                       String(fanRunTimeAccumulated);
 
       mqttClient.beginMessage(MQTT_TOPIC);
       mqttClient.print(payload);
@@ -246,35 +250,52 @@ void readExternalSensor()
 
 void turnOnFan()
 {
-  digitalWrite(FAN_PIN, HIGH);
-  fanState = true;
+  if (!fanState)
+  {
+    digitalWrite(FAN_PIN, HIGH);
+    fanState = true;
+
+    // Record the time the fan was turned on
+    fanRunTimeStart = now;
+  }
 }
 
 void turnOffFan()
 {
-  digitalWrite(FAN_PIN, LOW);
-  fanState = false;
+  if (fanState)
+  {
+
+    digitalWrite(FAN_PIN, LOW);
+    fanState = false;
+
+    // Update accumulated fan run time
+    fanRunTimeAccumulated += now - fanRunTimeStart;
+    fanRunTimeStart = 0;
+  }
 }
 
 void turnOnHeater()
 {
-  digitalWrite(HEATER_1_PIN, HIGH);
-  digitalWrite(HEATER_2_PIN, HIGH);
-  heaterState = true;
+  if (!heaterState)
+  {
+    digitalWrite(HEATER_1_PIN, HIGH);
+    digitalWrite(HEATER_2_PIN, HIGH);
+    heaterState = true;
+  }
 }
 
 void turnOffHeater()
 {
-  digitalWrite(HEATER_1_PIN, LOW);
-  digitalWrite(HEATER_2_PIN, LOW);
-
-  // Only update lastHeaterOff when the heater was previously on
   if (heaterState)
   {
-    lastHeaterOff = now;
-  }
 
-  heaterState = false;
+    digitalWrite(HEATER_1_PIN, LOW);
+    digitalWrite(HEATER_2_PIN, LOW);
+
+    lastHeaterOff = now;
+
+    heaterState = false;
+  }
 }
 
 void controlFan()
@@ -283,7 +304,13 @@ void controlFan()
   // but don't start or stop the fan until later
   if (now - lastFanOn >= FAN_TURN_ON_FREQ_MS)
   {
-    fanScheduledRun = true;
+    // Check if we need to run the fan this schedule
+    if (fanRunTimeAccumulated < FAN_RUN_TIME_MS)
+    {
+      fanScheduledRun = true;
+    }
+
+    fanRunTimeAccumulated = 0;
     lastFanOn = now;
   }
 
@@ -301,7 +328,7 @@ void controlFan()
   }
 
   // If we are in the fan overrun period, keep the fan on
-  if (now - lastHeaterOff <= FAN_OVERRUN_MS)
+  if (now - lastHeaterOff < FAN_OVERRUN_MS)
   {
     turnOnFan();
     return;
@@ -393,6 +420,9 @@ void printStatus()
     Serial.print(fanState ? "ON" : "OFF");
     Serial.print(" | Scheduled Fan Run: ");
     Serial.print(fanScheduledRun ? "YES" : "NO");
+    Serial.print(" | Fan Run Time Accumulated: ");
+    Serial.print(fanRunTimeAccumulated / 1000);
+    Serial.print(" s");
     Serial.print(" | WiFi Connected: ");
     Serial.print(WiFi.status() == WL_CONNECTED ? "YES" : "NO");
     Serial.print(" | WiFi SSID: ");
