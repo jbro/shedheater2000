@@ -392,22 +392,22 @@ void controlHeater()
 
 void printParameters()
 {
-  Serial.println("Shed Heater 2000 Initialized");
-  Serial.print("Heater Setpoint Temperature: ");
+  Serial.println(F("Shed Heater 2000 Initialized"));
+  Serial.print(F("Heater Setpoint Temperature: "));
   Serial.print(HEATER_SETPOINT_TEMPERATURE);
-  Serial.println(" C");
-  Serial.print("Heater Hysteresis: ");
+  Serial.println(F(" C"));
+  Serial.print(F("Heater Hysteresis: "));
   Serial.print(HEATER_HYSTERESIS);
-  Serial.println(" C");
-  Serial.print("Fan Overrun Time: ");
+  Serial.println(F(" C"));
+  Serial.print(F("Fan Overrun Time: "));
   Serial.print(FAN_OVERRUN_MS / 1000);
-  Serial.println(" s");
-  Serial.print("Fan Turn On Frequency: ");
+  Serial.println(F(" s"));
+  Serial.print(F("Fan Turn On Frequency: "));
   Serial.print(FAN_TURN_ON_FREQ_MS / 1000);
-  Serial.println(" s");
-  Serial.print("Fan Run Time: ");
+  Serial.println(F(" s"));
+  Serial.print(F("Fan Run Time: "));
   Serial.print(FAN_RUN_TIME_MS / 1000);
-  Serial.print(" s");
+  Serial.print(F(" s"));
   Serial.println();
 }
 
@@ -415,43 +415,43 @@ void printStatus()
 {
   if (now - lastStatusPrint >= STATUS_PRINT_INTERVAL_MS)
   {
-    Serial.print("Time: ");
+    Serial.print(F("Time: "));
     Serial.print(timeClient.getFormattedTime());
-    Serial.print(" | ");
-    Serial.print("Time synced: ");
-    Serial.print(timeClient.isTimeSet() ? "YES" : "NO");
-    Serial.print(" | ");
-    Serial.print("Uptime: ");
+    Serial.print(F(" | "));
+    Serial.print(F("Time synced: "));
+    Serial.print(timeClient.isTimeSet() ? F("YES") : F("NO"));
+    Serial.print(F(" | "));
+    Serial.print(F("Uptime: "));
     Serial.print(now / 1000);
-    Serial.print(" s | ");
-    Serial.print("Internal Temp: ");
+    Serial.print(F(" s | "));
+    Serial.print(F("Internal Temp: "));
     Serial.print(internalTemperature);
-    Serial.print(" C, Humidity: ");
+    Serial.print(F(" C, Humidity: "));
     Serial.print(internalHumidity);
-    Serial.print(" % | External Temp: ");
+    Serial.print(F(" % | External Temp: "));
     Serial.print(externalTemperature);
-    Serial.print(" C");
-    Serial.print(" | Heater: ");
-    Serial.print(heaterState ? "ON" : "OFF");
-    Serial.print(" | Fan: ");
-    Serial.print(fanState ? "ON" : "OFF");
-    Serial.print(" | Scheduled Fan Run: ");
-    Serial.print(fanScheduledRun ? "YES" : "NO");
-    Serial.print(" | Fan Run Time Accumulated: ");
+    Serial.print(F(" C"));
+    Serial.print(F(" | Heater: "));
+    Serial.print(heaterState ? F("ON") : F("OFF"));
+    Serial.print(F(" | Fan: "));
+    Serial.print(fanState ? F("ON") : F("OFF"));
+    Serial.print(F(" | Scheduled Fan Run: "));
+    Serial.print(fanScheduledRun ? F("YES") : F("NO"));
+    Serial.print(F(" | Fan Run Time Accumulated: "));
     Serial.print(fanRunTimeAccumulated / 1000);
-    Serial.print(" s");
-    Serial.print(" | WiFi Connected: ");
-    Serial.print(WiFi.status() == WL_CONNECTED ? "YES" : "NO");
-    Serial.print(" | WiFi SSID: ");
+    Serial.print(F(" s"));
+    Serial.print(F(" | WiFi Connected: "));
+    Serial.print(WiFi.status() == WL_CONNECTED ? F("YES") : F("NO"));
+    Serial.print(F(" | WiFi SSID: "));
     Serial.print(WiFi.SSID());
-    Serial.print(" | WiFi RSSI: ");
+    Serial.print(F(" | WiFi RSSI: "));
     Serial.print(WiFi.RSSI());
-    Serial.print(" dBm");
-    Serial.print(" | MQTT Connected: ");
-    Serial.print(mqttClient.connected() ? "YES" : "NO");
-    Serial.print(" | Free Heap: ");
+    Serial.print(F(" dBm"));
+    Serial.print(F(" | MQTT Connected: "));
+    Serial.print(mqttClient.connected() ? F("YES") : F("NO"));
+    Serial.print(F(" | Free Heap: "));
     Serial.print(ESP.getFreeHeap());
-    Serial.print(" bytes");
+    Serial.print(F(" bytes"));
     Serial.println();
 
     lastStatusPrint = now;
