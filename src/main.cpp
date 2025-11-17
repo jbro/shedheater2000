@@ -72,7 +72,7 @@ bool fanState = false;
 bool fanScheduledRun = false;
 unsigned long lastFanOn;
 unsigned long fanRunTimeAccumulated = 0; // Total fan run time accumulated in current schedule
-unsigned long fanRunTimeStart;           // Time when the fan was turned on for fan run
+unsigned long lastFanAccumulatedUpdate;  // Last time we updated the accumulated fan run time
 void controlHeater();
 void turnOnHeater();
 void turnOffHeater();
@@ -115,7 +115,7 @@ void setup()
   lastDHTRead = now - DHT_READ_INTERVAL_MS;                      // Force immediate DHT read
   lastExternalTempRead = now - EXTERNAL_TEMP_READ_INTERVAL_MS;   // Force immediate external temp read
   lastFanOn = now;                                               // Pretend the fan was just turned on on startup, so we run for the first time after FAN_TURN_ON_FREQ_MS
-  fanRunTimeStart = now;                                         // Initialize fan run time
+  lastFanAccumulatedUpdate = now;                                // Initialize last fan accumulated update time
   lastHeaterOff = now - FAN_OVERRUN_MS;                          // The heater has never been on
   lastStatusPrint = now;                                         // We are okay to wait STATUS_PRINT_INTERVAL_MS before first print
 
@@ -267,13 +267,7 @@ void turnOnFan()
   {
     digitalWrite(FAN_PIN, HIGH);
     fanState = true;
-
-    // Record the time the fan was turned on
-    fanRunTimeStart = now;
   }
-
-  fanRunTimeAccumulated += now - fanRunTimeStart;
-  fanRunTimeStart = now;
 }
 
 void turnOffFan()
@@ -283,10 +277,6 @@ void turnOffFan()
 
     digitalWrite(FAN_PIN, LOW);
     fanState = false;
-
-    // Update accumulated fan run time
-    fanRunTimeAccumulated += now - fanRunTimeStart;
-    fanRunTimeStart = now;
   }
 }
 
@@ -316,25 +306,33 @@ void turnOffHeater()
 
 void controlFan()
 {
+  // Update accumulated fan run time if the fan is on and not in a scheduled run
+  if (fanState && !fanScheduledRun)
+  {
+    fanRunTimeAccumulated += now - lastFanAccumulatedUpdate;
+  }
+
+  lastFanAccumulatedUpdate = now;
+
   // Check if it's time to turn on the fan for air circulation
   // but don't start or stop the fan until later
   if (now - lastFanOn >= FAN_TURN_ON_FREQ_MS)
   {
-    // Check if we need to run the fan this schedule
-    if (fanRunTimeAccumulated < FAN_RUN_TIME_MS)
-    {
-      fanScheduledRun = true;
-    }
-
+    fanScheduledRun = true;
     lastFanOn = now;
   }
 
   // Check if the scheduled fan run time has elapsed
-  if (fanScheduledRun && (now - lastFanOn >= FAN_RUN_TIME_MS))
+  if (fanScheduledRun)
   {
-    fanScheduledRun = false;
-
-    fanRunTimeAccumulated = 0;
+    {
+      unsigned long remaining = (fanRunTimeAccumulated >= FAN_RUN_TIME_MS) ? 0 : (FAN_RUN_TIME_MS - fanRunTimeAccumulated);
+      if (now - lastFanOn >= remaining)
+      {
+        fanScheduledRun = false;
+        fanRunTimeAccumulated = 0;
+      }
+    }
   }
 
   // If the heater is on, ensure the fan is on
