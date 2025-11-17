@@ -191,17 +191,19 @@ void publishMqttData()
     if (mqttClient.connected())
     {
       // Send status message as CSV
-      String payload = String(timeClient.getEpochTime()) + "," +      // Current epoch time
-                       String(timeClient.isTimeSet() ? 1 : 0) + "," + // Time synced state
-                       String(now / 1000) + "," +                     // Uptime in seconds
-                       String(WiFi.RSSI()) + "," +                    // WiFi RSSI
-                       String(internalTemperature) + "," +            // Internal temperature
-                       String(internalHumidity) + "," +               // Internal humidity
-                       String(externalTemperature) + "," +            // External temperature
-                       String(heaterState ? 1 : 0) + "," +            // Heater state
-                       String(fanState ? 1 : 0) + "," +               // Fan state
-                       String(fanScheduledRun ? 1 : 0) + "," +        // Fan scheduled run
-                       String(fanRunTimeAccumulated);                 // Fan run time accumulated
+      char payload[192];
+      snprintf(payload, sizeof(payload), "%lu,%d,%lu,%d,%.2f,%.2f,%.2f,%d,%d,%d,%lu",
+               timeClient.getEpochTime(),      // Current epoch time
+               timeClient.isTimeSet() ? 1 : 0, // Time synced state
+               now / 1000ul,                   // Uptime in seconds
+               WiFi.RSSI(),                    // WiFi RSSI
+               internalTemperature,            // Internal temperature
+               internalHumidity,               // Internal humidity
+               externalTemperature,            // External temperature
+               heaterState ? 1 : 0,            // Heater state
+               fanState ? 1 : 0,               // Fan state
+               fanScheduledRun ? 1 : 0,        // Fan scheduled run
+               fanRunTimeAccumulated);         // Fan run time accumulated
 
       mqttClient.beginMessage(MQTT_TOPIC);
       mqttClient.print(payload);
