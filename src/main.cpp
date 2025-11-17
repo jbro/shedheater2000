@@ -364,7 +364,7 @@ void controlFan()
 
 void controlHeater()
 {
-  // Safety check: if external temperature is invalid, turn off heater
+  // Safety check: if temperature is invalid, turn off heater
   if (isnan(internalTemperature))
   {
     turnOffHeater();
