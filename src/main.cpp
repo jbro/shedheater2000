@@ -223,9 +223,8 @@ void readInternalSensor()
     {
       internalTemperature = temperature;
       internalHumidity = humidity;
-
-      lastDHTRead = now;
     }
+    lastDHTRead = now;
   }
 }
 
